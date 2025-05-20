@@ -1,8 +1,9 @@
-# Semantic Kernel Clothing Analysis System
+# <img src="https://github.com/user-attachments/assets/b6932652-55d2-48b9-bedc-9aeaef49ac00" alt="image" width="80"/> Semantic Kernel Clothing Analysis System 
 
 A C# application that uses Azure Semantic Kernel to analyze clothing items using multiple LLM-powered agents with different personas. The system implements three different approaches to multi-agent orchestration using the Semantic Kernel Process Framework.
 
-![Semantic Kernel Logo](https://raw.githubusercontent.com/microsoft/semantic-kernel/main/docs/media/sk-logo.png)
+
+
 
 ## Overview
 
