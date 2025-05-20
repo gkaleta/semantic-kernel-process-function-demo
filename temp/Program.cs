@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Diagnostics; // Add Stopwatch for timing
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 
@@ -87,6 +88,9 @@ namespace Shop
                 
                 // 7. Run the selected approach
                 List<AgentResponse> results = new List<AgentResponse>();
+                Stopwatch stopwatch = new Stopwatch(); // Create stopwatch to track execution time
+                stopwatch.Start(); // Start timing
+                
                 if (approach == 1)
                 {
                     // Use the Process Framework
@@ -103,8 +107,16 @@ namespace Shop
                     results = await RunAdvancedProcessFrameworkAsync(kernel, selectedCategory, baseDescription, additionalContext);
                 }
                 
+                stopwatch.Stop(); // Stop timing
+                TimeSpan executionTime = stopwatch.Elapsed; // Get elapsed time
+                
+                // Display execution time
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"\nExecution time: {executionTime.TotalSeconds:F2} seconds");
+                Console.ResetColor();
+                
                 // Save results to file
-                SaveResultsToFile(results, selectedCategory, approach == 1 ? "ProcessFramework" : (approach == 2 ? "GroupChat" : "AdvancedProcessFramework"));
+                SaveResultsToFile(results, selectedCategory, approach == 1 ? "ProcessFramework" : (approach == 2 ? "GroupChat" : "AdvancedProcessFramework"), executionTime);
             }
             catch (Exception ex)
             {
@@ -120,11 +132,19 @@ namespace Shop
         {
             Console.WriteLine("\n===== RUNNING CLOTHING ANALYSIS USING PROCESS FRAMEWORK =====\n");
             
+            // Start timing this specific process
+            Stopwatch processStopwatch = new Stopwatch();
+            processStopwatch.Start();
+            
             // Create the clothing analysis process
             var process = new ClothingAnalysisProcess(kernel, category, baseDescription, additionalContext);
             
             // Run the process and get the results
             var results = await process.RunProcessAsync();
+            
+            // Stop timing and calculate execution time
+            processStopwatch.Stop();
+            TimeSpan processTime = processStopwatch.Elapsed;
             
             // Display the results
             foreach (var result in results)
@@ -142,6 +162,11 @@ namespace Shop
                 Console.WriteLine(); // Add extra line break between responses
             }
             
+            // Display process execution time
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Process Framework execution time: {processTime.TotalSeconds:F2} seconds");
+            Console.ResetColor();
+            
             return results;
         }
         
@@ -151,6 +176,10 @@ namespace Shop
         static async Task<List<AgentResponse>> RunGroupChatAsync(Kernel kernel, string category, string baseDescription, string additionalContext)
         {
             Console.WriteLine("\n===== RUNNING CLOTHING ANALYSIS USING GROUP CHAT =====\n");
+            
+            // Start timing this specific process
+            Stopwatch groupChatStopwatch = new Stopwatch();
+            groupChatStopwatch.Start();
             
             // Create a new group chat
             var groupChat = new GroupChat(kernel);
@@ -191,6 +220,15 @@ namespace Shop
             // The messages are already displayed during the conversation
             Console.WriteLine("\n===== GROUP CHAT COMPLETED =====\n");
             
+            // Stop timing and calculate execution time
+            groupChatStopwatch.Stop();
+            TimeSpan groupChatTime = groupChatStopwatch.Elapsed;
+            
+            // Display process execution time
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Group Chat execution time: {groupChatTime.TotalSeconds:F2} seconds");
+            Console.ResetColor();
+            
             // Convert chat messages to AgentResponse objects for consistency with other approaches
             var results = new List<AgentResponse>();
             foreach (var message in messages)
@@ -225,6 +263,10 @@ namespace Shop
         {
             Console.WriteLine("\n===== RUNNING CLOTHING ANALYSIS USING ADVANCED PROCESS FRAMEWORK =====\n");
             
+            // Start timing this specific process
+            Stopwatch advancedProcessStopwatch = new Stopwatch();
+            advancedProcessStopwatch.Start();
+            
             // Create the advanced process framework
             var advancedProcess = new AdvancedProcessFramework(
                 kernel, 
@@ -235,6 +277,10 @@ namespace Shop
             
             // Run the process
             var results = await advancedProcess.RunAdvancedProcessAsync();
+            
+            // Stop timing and calculate execution time
+            advancedProcessStopwatch.Stop();
+            TimeSpan advancedProcessTime = advancedProcessStopwatch.Elapsed;
             
             // Display the results
             Console.WriteLine("\n===== FINAL RESULTS =====\n");
@@ -253,6 +299,11 @@ namespace Shop
                 Console.WriteLine(); // Add extra line break between responses
             }
             
+            // Display process execution time
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Advanced Process Framework execution time: {advancedProcessTime.TotalSeconds:F2} seconds");
+            Console.ResetColor();
+            
             Console.WriteLine("\n===== ADVANCED PROCESS FRAMEWORK COMPLETED =====\n");
             
             return results;
@@ -261,7 +312,7 @@ namespace Shop
         /// <summary>
         /// Saves analysis results to a file for persistence.
         /// </summary>
-        static void SaveResultsToFile(List<AgentResponse> results, string category, string processType)
+        static void SaveResultsToFile(List<AgentResponse> results, string category, string processType, TimeSpan executionTime)
         {
             try
             {
@@ -284,6 +335,7 @@ namespace Shop
                     $"Category: {category}",
                     $"Process Type: {processType}",
                     $"Date: {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}",
+                    $"Execution Time: {executionTime.TotalSeconds:F2} seconds",
                     $"==========================================",
                     ""
                 };
@@ -302,6 +354,7 @@ namespace Shop
                 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"\nResults saved to: {filePath}");
+                Console.WriteLine($"Total execution time: {executionTime.TotalSeconds:F2} seconds");
                 Console.ResetColor();
             }
             catch (Exception ex)

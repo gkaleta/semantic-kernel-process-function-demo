@@ -1,3 +1,7 @@
+---
+marp: true
+---
+
 # Multi-Agent Clothing Analysis System: PowerPoint Presentation Outline
 
 ## Slide 1: Title

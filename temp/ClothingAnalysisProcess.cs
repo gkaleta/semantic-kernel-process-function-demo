@@ -101,12 +101,55 @@ namespace Shop
             if (agent.Name == "Visual Analyst")
             {
                 // Special prompt for the Visual Analyst to simulate image analysis
-                prompt = $"{agent.Prompt}\n\nProduct category: {_category}\nImage analysis data:\n{_imageFolderContext}\n\nProvide a detailed description of what you can see in this image, including the design, color, style, and key features of the {_category}. Focus exclusively on the visual elements as if you were analyzing the actual image.";
+                prompt = $@"{agent.Prompt}
+
+            Product category: {_category}
+            Image analysis data:
+            {_imageFolderContext}
+
+            Provide a detailed description of what you can see in this image, including the design, 
+            color, style, and key features of the {_category}. Focus exclusively on the visual 
+            elements as if you were analyzing the actual image.";
+            }
+            else if (agent.Name == "Marketing Copywriter")
+            {
+                // Special prompt for the Marketing Copywriter
+                prompt = $@"{agent.Prompt}
+
+            Product: {_baseDescription}
+            Category: {_category}
+
+            Product analysis details:
+            {_imageFolderContext}
+
+            Create a persuasive, benefit-driven product description that sells this item.";
+            }
+            else if (agent.Name == "Poetic Designer")
+            {
+                // Special prompt for the Poetic Designer
+                prompt = $@"{agent.Prompt}
+            Product: {_baseDescription}
+            Category: {_category}
+
+            Product analysis details:
+            {_imageFolderContext}
+
+            Create a unique, engaging description that captures the essence of this clothing item.
+            Focus on its style, appeal, and how it makes the wearer feel.";
             }
             else
             {
                 // Standard prompt for other agents
-                prompt = $"{agent.Prompt}\n\nProduct: {_baseDescription}\nCategory: {_category}\n\nProduct analysis details:\n{_imageFolderContext}\n\nCreate a unique, engaging description that captures the essence of this clothing item. Focus on its style, appeal, and how it makes the wearer feel.";
+                prompt = $@"{agent.Prompt}
+
+Product: {_baseDescription}
+Category: {_category}
+
+Product analysis details:
+{_imageFolderContext}
+
+Create a unique, engaging description that captures the essence of this clothing item. 
+Focus on its style, appeal, and how it makes the wearer feel.";
             }
             
             var result = await _kernel.InvokePromptAsync(prompt);
