@@ -1,0 +1,2 @@
+This is a placeholder for a T-shirt image. 
+Please replace with an actual JPG or PNG image file of a T-shirt for the application to analyze.

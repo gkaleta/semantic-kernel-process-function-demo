@@ -1,0 +1,293 @@
+backup.txt
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
+
+namespace Shop
+{
+    public class Program
+    {
+        static async Task Main(string[] args)
+        {
+            try
+            {
+                // 1. Kernel Setup
+                var builder = Kernel.CreateBuilder();
+                builder.AddAzureOpenAIChatCompletion(
+                    deploymentName: "gpt-4.1",
+                    endpoint: "https://g-openai.openai.azure.com/",
+                    apiKey: Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY") 
+                    // Get key from environment variable for security
+                );
+                var kernel = builder.Build();
+
+                // 2. Display available folders
+                string[] availableCategories = { "TShirt", "Sweater", "Jeans" };
+                Console.WriteLine("Available clothing categories:");
+                for (int i = 0; i < availableCategories.Length; i++)
+                {
+                    Console.WriteLine($"{i+1}. {availableCategories[i]}");
+                }
+                
+                // 3. User selects folder to analyze
+                Console.Write("\nSelect a category number (1-3): ");
+                string categoryInput = Console.ReadLine() ?? "1";
+                int categoryIndex;
+                if (!int.TryParse(categoryInput, out categoryIndex) || categoryIndex < 1 || categoryIndex > availableCategories.Length)
+                {
+                    Console.WriteLine("Invalid selection. Defaulting to TShirt (1).");
+                    categoryIndex = 1;
+                }
+                string selectedCategory = availableCategories[categoryIndex - 1];
+                
+                // 4. Input Stage: User provides a base description
+                Console.WriteLine($"\nEnter a base clothing description for {selectedCategory}:");
+                string baseDescription = Console.ReadLine() ?? "modern casual clothing";
+                
+                // 5. Read the selected folder for context
+                string categoryPath = Path.Combine("/Users/gustav/funpark/SK/Shop/clothes", selectedCategory);
+                string additionalContext = GetFolderContentsContext(categoryPath);
+                Console.WriteLine($"\nAnalyzing {selectedCategory} folder: {additionalContext}");
+                
+                // 6. Multi-Agent Group Chat for descriptions
+                Console.WriteLine($"\nGenerating descriptions for: {baseDescription} ({selectedCategory})...\n");
+                var responses = await RunGroupChat(kernel, baseDescription, selectedCategory, additionalContext);
+                foreach (var response in responses)
+                {
+                    // Parse the color-coded response
+                    string[] parts = response.Split('|', 3);
+                    if (parts.Length == 3)
+                    {
+                        string persona = parts[0];
+                        ConsoleColor color = Enum.Parse<ConsoleColor>(parts[1]);
+                        string content = parts[2];
+                        
+                        // Print persona name in white
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.WriteLine($"[{persona}]:");
+                        
+                        // Print content in the agent's color
+                        Console.ForegroundColor = color;
+                        Console.WriteLine(content);
+                        
+                        // Reset color
+                        Console.ResetColor();
+                        Console.WriteLine(); // Add extra line break between responses
+                    }
+                    else
+                    {
+                        // Fallback if parsing fails
+                        Console.WriteLine(response);
+                        Console.WriteLine();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+            }
+        }
+
+        static async Task<List<string>> RunGroupChat(Kernel kernel, string baseDesc, string category, string additionalContext)
+        {
+            var agents = new List<(string Persona, string Prompt, ConsoleColor Color)>
+            {
+                ("Minimalist Stylist", "Create a clean, modern, concise product description for this clothing item:", ConsoleColor.Cyan),
+                ("Poetic Designer", "Create an expressive, metaphor-rich product description with creative language:", ConsoleColor.Magenta),
+                ("Marketing Copywriter", "Create a persuasive, benefit-driven product description that sells this item:", ConsoleColor.Yellow),
+                ("Visual Analyst", "Analyze the image of this clothing item in detail and describe what you see, including style, color, pattern, and other visual elements:", ConsoleColor.Green)
+            };
+
+            var results = new List<string>();
+            foreach (var (persona, prompt, color) in agents)
+            {
+                string input;
+                
+                // Special prompt for the Visual Analyst to simulate image analysis
+                if (persona == "Visual Analyst")
+                {
+                    input = $"{prompt}\n\nProduct category: {category}\nImage analysis data:\n{additionalContext}\n\nProvide a detailed description of what you can see in this image, including the design, color, style, and key features of the {category}. Focus exclusively on the visual elements as if you were analyzing the actual image.";
+                }
+                else
+                {
+                    // Standard prompt for other agents
+                    input = $"{prompt}\n\nProduct: {baseDesc}\nCategory: {category}\n\nProduct analysis details:\n{additionalContext}\n\nCreate a unique, engaging description that captures the essence of this clothing item. Focus on its style, appeal, and how it makes the wearer feel.";
+                }
+                
+                var result = await kernel.InvokePromptAsync(input);
+                
+                // Store the result with color info
+                results.Add($"{persona}|{color}|{result.GetValue<string>()}");
+            }
+            return results;
+        }
+
+        static string GetFolderContentsContext(string folderPath)
+        {
+            try
+            {
+                if (!Directory.Exists(folderPath))
+                {
+                    return "No folder found";
+                }
+
+                // List all files in the directory
+                string[] files = Directory.GetFiles(folderPath);
+                if (files.Length == 0)
+                {
+                    return "Empty folder";
+                }
+
+                List<string> fileInfos = new List<string>();
+                fileInfos.Add($"Found {files.Length} file(s)");
+                
+                foreach (string file in files)
+                {
+                    string fileName = Path.GetFileName(file);
+                    string extension = Path.GetExtension(file).ToLowerInvariant();
+                    
+                    // Check if the file is an image
+                    if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".gif")
+                    {
+                        fileInfos.Add($"Image file: {fileName}");
+                        
+                        // For a real application, you would use an image analysis service here
+                        // For demo, we'll extract information from the filename and provide more detailed simulated analysis
+                        string imageType = Path.GetFileNameWithoutExtension(fileName).ToLowerInvariant();
+                        
+                        // Generate random "image dimensions" for the simulation
+                        Random rand = new Random();
+                        int width = rand.Next(1200, 2400);
+                        int height = rand.Next(1200, 2400);
+                        fileInfos.Add($"Image dimensions: {width}x{height} pixels");
+                        fileInfos.Add($"Image format: {extension.Replace(".", "").ToUpperInvariant()}");
+                        
+                        // Detailed image simulation analysis based on the category
+                        if (imageType.Contains("tshirt") || imageType.Contains("t-shirt") || folderPath.Contains("TShirt"))
+                        {
+                            fileInfos.Add("Product type: T-shirt");
+                            
+                            // Add more simulated image analysis details
+                            if (imageType.Contains("plain"))
+                            {
+                                fileInfos.Add("Style: Plain, solid color");
+                                fileInfos.Add("Pattern: None");
+                            }
+                            else if (imageType.Contains("graphic"))
+                            {
+                                fileInfos.Add("Style: Graphic print");
+                                fileInfos.Add("Pattern: Decorative graphic on front");
+                            }
+                            else if (imageType.Contains("stripe"))
+                            {
+                                fileInfos.Add("Style: Striped pattern");
+                                fileInfos.Add("Pattern: Horizontal stripes");
+                            }
+                            else
+                            {
+                                fileInfos.Add("Style: Classic casual t-shirt");
+                                fileInfos.Add("Pattern: Minimal design");
+                            }
+                            
+                            // Simulate color detection
+                            if (imageType.Contains("black"))
+                            {
+                                fileInfos.Add("Primary color: Black");
+                                fileInfos.Add("Color palette: Monochrome");
+                            }
+                            else if (imageType.Contains("white"))
+                            {
+                                fileInfos.Add("Primary color: White");
+                                fileInfos.Add("Color palette: Bright, clean");
+                            }
+                            else if (imageType.Contains("blue"))
+                            {
+                                fileInfos.Add("Primary color: Blue");
+                                fileInfos.Add("Color palette: Cool tones");
+                            }
+                            else
+                            {
+                                fileInfos.Add("Primary color: Mixed/Custom");
+                                fileInfos.Add("Color palette: Balanced, versatile");
+                            }
+                            
+                            // Add simulated details about the t-shirt's features
+                            fileInfos.Add("Neckline: Crew neck (round)");
+                            fileInfos.Add("Sleeve length: Short");
+                            fileInfos.Add("Fit: Regular/Relaxed");
+                            fileInfos.Add("Material appearance: Soft cotton blend");
+                        }
+                        else if (imageType.Contains("sweater") || imageType.Contains("sweatshirt") || folderPath.Contains("Sweater"))
+                        {
+                            fileInfos.Add("Product type: Sweater/Sweatshirt");
+                            fileInfos.Add("Style: Casual outerwear");
+                            
+                            // Add detailed sweater attributes
+                            fileInfos.Add("Material appearance: Knitted fabric");
+                            fileInfos.Add("Thickness: Medium weight");
+                            fileInfos.Add("Neckline: Crew neck");
+                            fileInfos.Add("Pattern: Minimal design");
+                            fileInfos.Add("Sleeve length: Long");
+                            fileInfos.Add("Fit: Relaxed, comfortable");
+                            fileInfos.Add("Cuffs: Ribbed finish");
+                            fileInfos.Add("Primary color: Mixed natural tones");
+                            fileInfos.Add("Color palette: Earthy, versatile");
+                        }
+                        else if (imageType.Contains("jeans") || imageType.Contains("pants") || folderPath.Contains("Jeans"))
+                        {
+                            fileInfos.Add("Product type: Jeans/Pants");
+                            fileInfos.Add("Style: Casual bottoms");
+                            
+                            // Add detailed jeans attributes
+                            fileInfos.Add("Material appearance: Denim fabric");
+                            fileInfos.Add("Wash: Medium wash");
+                            fileInfos.Add("Fit: Regular/Straight leg");
+                            fileInfos.Add("Rise: Mid-rise");
+                            fileInfos.Add("Length: Full length");
+                            fileInfos.Add("Details: Five-pocket design");
+                            fileInfos.Add("Closure: Button and zipper fly");
+                            fileInfos.Add("Primary color: Indigo blue");
+                            fileInfos.Add("Fabric texture: Slightly textured");
+                        }
+                        
+                        // Add generic clothing attributes for any image file
+                        fileInfos.Add("Target audience: Adults, casual fashion");
+                        fileInfos.Add("Usage context: Everyday wear, casual outings");
+                        fileInfos.Add("Lighting conditions: Studio lighting, neutral background");
+                        fileInfos.Add("Image perspective: Front view, fully visible");
+                        fileInfos.Add("Season: All-season versatile wear");
+                    }
+                    // For text files, we could read and include their content
+                    else if (extension == ".txt")
+                    {
+                        try
+                        {
+                            string content = File.ReadAllText(file);
+                            fileInfos.Add($"Text file {fileName}: {content}");
+                        }
+                        catch
+                        {
+                            fileInfos.Add($"Text file {fileName} (unable to read content)");
+                        }
+                    }
+                    else
+                    {
+                        fileInfos.Add($"File: {fileName}");
+                    }
+                }
+
+                return string.Join("; ", fileInfos);
+            }
+            catch (Exception ex)
+            {
+                return $"Error scanning folder: {ex.Message}";
+            }
+        }
+    }
+}
+// This code is a C# console application that uses the Semantic Kernel to analyze clothing categories and generate product descriptions.

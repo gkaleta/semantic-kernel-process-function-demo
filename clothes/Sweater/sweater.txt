@@ -1,0 +1,2 @@
+This is a placeholder for a Sweater image.
+Please replace with an actual JPG or PNG image file of a sweater for the application to analyze.
