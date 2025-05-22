@@ -280,6 +280,22 @@ The application includes error handling for common scenarios:
 
 All errors are logged to the console with descriptive messages.
 
+## The 3 Approaches side by side
+![image](https://github.com/user-attachments/assets/2631b587-a265-4998-ab32-aa8ee23f23d3)
+
+![image](https://github.com/user-attachments/assets/d98ba5ca-1e0d-4a89-8aec-d1269ac9c27a)
+
+![image](https://github.com/user-attachments/assets/f2cb64c7-3b71-447e-a297-fb8261964634)
+
+![image](https://github.com/user-attachments/assets/b0d61c0f-2f70-4fc4-a594-6b0c45fa0133)
+
+![image](https://github.com/user-attachments/assets/e056a62e-c0fe-43be-b2a6-3a73e23db635)
+
+
+
+
+
+
 ## Further Development
 
 Potential enhancements to consider:
